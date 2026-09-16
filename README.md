@@ -28,6 +28,7 @@
     <div id="ai-status" class="bg-green-500 text-white text-xs text-center font-bold py-1">AI: ปกติ</div>
   </div>
 
+  <!-- Navbar -->
   <nav class="makro-red text-white p-4 shadow-md flex justify-between items-center">
     <h1 class="text-xl font-bold md:text-2xl">HR Store Assessment 2026</h1>
     <div id="user-info" class="text-xs md:text-sm font-semibold truncate max-w-[50%]">กรุณาเข้าสู่ระบบ</div>
@@ -67,6 +68,7 @@
          </div>
       </div>
 
+      <!-- คำชี้แจง และ ปุ่มเปิดกล้อง -->
       <div class="bg-white p-6 rounded-lg shadow-md mb-6 border-t-4 border-red-800">
         <h2 class="text-lg font-bold text-gray-800 mb-2 flex items-center">
            <svg class="w-5 h-5 mr-2 text-red-700" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
@@ -84,7 +86,7 @@
 
       <div id="questions-container" class="hidden space-y-6"></div>
       
-      <div id="action-buttons" class="hidden mt-6 flex justify-between">
+      <div id="action-buttons" class="hidden mt-6 flex justify-between pb-20">
         <button onclick="saveDraft()" class="bg-gray-500 text-white px-6 py-2 rounded-lg shadow hover:bg-gray-600 font-medium">บันทึกร่าง (Draft)</button>
         <button onclick="submitAssessment()" class="makro-red text-white px-8 py-2 rounded-lg shadow-md hover:bg-red-900 font-bold text-lg">ส่งแบบประเมิน</button>
       </div>
@@ -97,12 +99,13 @@
     let isMonitoring = false;
     let currentAssessmentId = '';
 
-    // Mock Object สำหรับรัน Preview ใน Editor
+    // Mock Object สำหรับทดสอบใน Editor (ถ้าไม่ได้รันบน Apps Script ของจริง)
     const getProxy = () => {
       const p = {
         loginWithEmployeeId: (id) => {
             if(id === '00020686') return {empId: id, name: 'คุณประมวล (Admin)', role: 'Administrator', branch: 'Head Office'};
-            return { empId: id, name: 'พนักงาน ทดสอบ', role: 'HR Store', branch: 'Makro สาขา 1' };
+            if(id.length > 0) return { empId: id, name: 'พนักงาน ทดสอบ', role: 'HR Store', branch: 'Makro สาขา 1' };
+            return { role: 'None', error: 'ไม่พบรหัส' };
         },
         getQuestions: () => [
           { id: 'Q01', dimension: 'Leadership', text: 'เล่าปัญหาด้านทักษะที่พบ' },
@@ -154,16 +157,16 @@
         return;
       }
       
-      // แสดงชื่อ และ สาขา ให้ชัดเจน
+      // แสดงชื่อ และ สาขา ให้ชัดเจนบน Navbar
       document.getElementById('user-info').innerText = `${user.name} | สาขา: ${user.branch} | ${user.role}`;
       
-      // อัปเดตข้อมูลในกล่อง Profile ใหญ่
+      // อัปเดตข้อมูลในกล่อง Profile
       document.getElementById('profile-name').innerText = user.name;
       document.getElementById('profile-details').innerText = `รหัสพนักงาน: ${user.empId} | ตำแหน่ง: ${user.role} | สาขา: ${user.branch}`;
       
-      // ป้องกันพิมพ์ Role ผิดพลาด
       const safeRole = String(user.role).trim().toLowerCase();
       
+      // อนุญาตให้ HR Store และ Admin เข้าทำประเมินได้
       if(safeRole === 'hr store' || safeRole === 'administrator') {
         document.getElementById('employee-view').classList.remove('hidden');
         
@@ -215,14 +218,12 @@
       if(!document.getElementById('accept-policy').checked) return;
       document.getElementById('accept-policy').disabled = true;
 
-      // พยายามเปิดกล้อง (บังคับกล้องหน้า)
       try {
-        Swal.fire({ title: 'กำลังโหลดระบบรักษาความปลอดภัย...', text: 'กรุณาอนุญาตให้ระบบเข้าถึงกล้องเว็บแคมของคุณ', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        Swal.fire({ title: 'กำลังโหลดระบบ AI...', text: 'กรุณาอนุญาตให้ระบบเข้าถึงกล้องเว็บแคม', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         const video = document.getElementById('video');
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
         video.srcObject = stream;
         
-        // รอโหลด AI โมเดล
         const model = await cocoSsd.load();
         Swal.close();
         
@@ -239,15 +240,14 @@
         Swal.fire({
           icon: 'error',
           title: 'ไม่สามารถเปิดกล้องได้',
-          html: `<p class="text-sm text-gray-600">เบราว์เซอร์หรือระบบปฏิบัติการ (Windows/Mac) ปฏิเสธการเข้าถึงกล้อง กรุณากดอนุญาตที่แถบ URL หรือตรวจสอบการตั้งค่าของเครื่อง</p>
+          html: `<p class="text-sm text-gray-600">เบราว์เซอร์หรือระบบปฏิบัติการปฏิเสธการเข้าถึงกล้อง กรุณากดอนุญาตที่แถบ URL หรือตรวจสอบการตั้งค่าของเครื่อง</p>
                  <div class="mt-4 pt-4 border-t border-gray-200">
-                    <button id="bypass-btn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300">คลิกที่นี่เพื่อข้ามการใช้กล้อง (Bypass สำหรับตรวจสอบระบบ)</button>
+                    <button id="bypass-btn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300">คลิกที่นี่เพื่อข้ามการใช้กล้อง (Bypass)</button>
                  </div>`,
           showConfirmButton: true,
           confirmButtonText: 'รับทราบ (ลองใหม่)'
         });
         
-        // ฟังก์ชัน Bypass สำหรับให้แอดมินหรือช่วงทดสอบระบบไปต่อได้
         document.getElementById('accept-policy').checked = false;
         document.getElementById('accept-policy').disabled = false;
         
@@ -260,7 +260,6 @@
                document.getElementById('accept-policy').disabled = true;
                document.getElementById('questions-container').classList.remove('hidden');
                document.getElementById('action-buttons').classList.remove('hidden');
-               Swal.fire('ข้ามการตรวจจับด้วยกล้อง', 'ระบบเปิดให้ทำข้อสอบแล้ว', 'info');
              };
            }
         }, 100);
@@ -290,7 +289,7 @@
         statusBox.className = 'bg-green-500 text-white text-xs text-center font-bold py-1';
         statusBox.innerText = 'AI: ปกติ';
       }
-      setTimeout(() => detectCheating(video, model), 2000); // วนลูปทุก 2 วินาที
+      setTimeout(() => detectCheating(video, model), 2000); 
     }
 
     function gatherAnswers() {
@@ -315,7 +314,7 @@
       
       const payload = {
         assessmentId: currentAssessmentId,
-        user: userContext,
+        user: userContext, // ส่งข้อมูล ชื่อ รหัส สาขา ไปให้ Backend เพื่อแยกแยะบุคคล
         answers: data.answers
       };
 
